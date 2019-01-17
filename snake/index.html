@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <!-- https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.6.1/addons/ -->
+    <meta charset="UTF-8">
+    <title>Snake Game</title>
+    <script type="text/javascript" src="../p5/p5.js"></script>
+    <script type="text/javascript" src="../p5/addons/p5.dom.js"></script>
+    <script type="text/javascript" src="../p5/addons/p5.sound.js"></script>
+    <script type="text/javascript" src="sketch.js"></script>
+    <script type="text/javascript" src="snake.js"></script>
+    <style type="text/css">
+      *{
+        padding: 0;
+        margin: 0;
+      }
+      #tx{
+        width: 0px;height: 0px;
+        background: url("爆炸.png") no-repeat;
+        position: fixed;
+        top: 100px;
+        animation: jump 3s linear 2;
+       /* animation: dis 3s linear infinite;*/
+      }
+      @keyframes jump{
+      0%{ 
+        width: 500px;height: 460px;
+        transform: scale(.5) ;
+      }
+
+      70%{
+         width: 500px;height: 460px;
+        transform: scale(1.1) translate(200px);
+
+      }
+      90%{
+         width: 500px;height: 460px;
+        transform: scale(2) translate(500px);
+      }
+      100%{
+        transform: scale(2) translate(500px); 
+      }
+      @keyframes dis{
+        0%{
+          display: none;
+        }
+        100%{
+          display: none;
+        }
+      }
+    }
+    </style>
+  </head>
+  <body>
+  <!-- <div style="width: 600px;height: 600px;display: none; float: left;"></div> -->
+  <div style="width: 450px;height: 600px;background-color: #FFF;float: left;"></div>
+  <div id="tx"></div>
+  </body>
+</html>
