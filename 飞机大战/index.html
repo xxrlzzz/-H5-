@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>BallFight</title>
+	<link rel="stylesheet" type="text/css" href="css/sy.css">
+</head>
+<body>
+	<div id="container">
+		<canvas id="mycanvas" style="border:1px solid #cecece">
+			浏览器不支持canvas
+		</canvas>
+	</div>
+		<input type="button" id="bt" value="restart" onclick="restart();">
+		<script>
+		document.getElementById('mycanvas').width=document.body.clientWidth;
+		document.getElementById('mycanvas').height=document.body.clientHeight;
+		window.onresize=function(){
+			document.getElementById('mycanvas').width=document.body.clientWidth;
+			document.getElementById('mycanvas').height=document.body.clientHeight;
+		}
+		var ctx=document.getElementById('mycanvas').getContext("2d");
+		var W=ctx.canvas.width;
+		var H=ctx.canvas.height;
+		var RESTART=document.getElementById('bt');
+		var SCORE=0;
+
+		function windowTocanvas(dx,dy){
+			var p={};
+			var bbox=ctx.canvas.getBoundingClientRect();
+			p.x=dx-bbox.left;
+			p.y=dy-bbox.top;
+			return p;
+		}
+		var isDown=false;
+		var curp={x:W/2,y:H*0.75};
+		ctx.canvas.onmousemove=function(e){
+			e.preventDefault();
+			if (isDown) {
+				var p=windowTocanvas(e.clientX,e.clientY);
+				hero.x=p.x;
+				hero.y=p.y;
+				curp=p;
+			}
+		}
+		ctx.canvas.onmousedown=function(e){
+			e.preventDefault();
+			var p=windowTocanvas(e.clientX,e.clientY);
+			var s=Math.sqrt((p.x-curp.x)*(p.x-curp.x)+(p.y-curp.y)*(p.y-curp.y))
+			if (s-hero.r<hero.r/3) {
+				isDown=true;
+			}
+		}
+		ctx.canvas.onmouseup=function(e){
+			e.preventDefault();
+			isDown=false;
+		}
+
+    	ctx.canvas.addEventListener('touchstart',touchstart,false);
+	    ctx.canvas.addEventListener('touchmove',touchmove,false);
+	    ctx.canvas.addEventListener('touchend',touchend,false);
+		function touchmove(e){
+			e.preventDefault();
+			if (isDown) {
+				var p=windowTocanvas(e.touches[0].clientX,e.touches[0].clientY);
+				hero.x=p.x;
+				hero.y=p.y;
+				curp=p;
+			}
+		}
+		function touchstart(e){
+			e.preventDefault();
+			var p=windowTocanvas(e.touches[0].clientX,e.touches[0].clientY);
+			var s=Math.sqrt((p.x-curp.x)*(p.x-curp.x)+(p.y-curp.y)*(p.y-curp.y))
+			if (s-hero.r<hero.r/3) {
+				isDown=true;
+			}
+		}
+		function touchend(e){
+			e.preventDefault();
+			isDown=false;
+		}
+		function getRandom(a,b){
+			if (a<b) {
+				var c=b;
+				b=a;
+				a=c;
+			}
+			return Math.random()*(a-b+1)+b;
+		}
+		/*敌人*/
+		var ememys=[];
+		var ememycolors=["rgba(0, 153, 255, 1)","rgba(102, 255, 255, 1)","rgba(204, 153, 255, 1)"];
+		var ememy=function(dx,dy,dr,ds,sc,l){
+			this.x=dx;
+			this.y=dy;
+			this.r=dr;
+			this.c=ememycolors[Math.floor(getRandom(3,1))-1];
+			this.s=ds;
+			this.sc=sc;
+			this.life=l;
+			this.boom=false;
+			this.die=false;
+			this.o=1;//透明度
+		}
+		var createEmemy=function(){
+			var x,y,r,s,sc,l;
+			r=Math.floor(getRandom(30,16));
+			x=Math.floor(getRandom(W-r,r));
+			y=-r;
+			sc=r*10;
+			var ds=SCORE<30000?0:SCORE<60000?1:SCORE<120000?2:3;
+			s=Math.floor(8-r/5)+ds;
+			if (r<20)
+				l=2;
+			else if(r<26)
+				l=4;
+			else if (r<31)
+				l=6;
+			var e=new ememy(x,y,r,s,sc,l);
+			ememys.push(e);
+			console.log(ememys);
+		}
+		setInterval(createEmemy,500);
+
+		function setcolor(c,i){
+			var ac=c.split(' ');
+			i-=0.2;
+			ac[3]=i+')';
+			var result = ac.reduce(function(x,y){
+				return x+' '+y;
+			});
+			return result;
+		}
+		var flag=0;//模拟爆炸，淡出的刷新频率
+		var drawEmemys=function(){
+			if(ememys.length<=0){return;}
+			for(var i=0;i<ememys.length;i++){
+				if(ememys[i].boom && flag%3===0){
+					var cc=setcolor(ememys[i].c,ememys[i].o);
+					ememys[i].o-=0.2;
+					ememys[i].c=cc;
+					flag=0;
+					if(ememys[i].o<=0){
+						ememys[i].die=true;
+						SCORE+=ememys[i].sc;
+					}	
+				}
+				flag++;
+				if(ememys[i].die){
+					ememys.splice(i,1);
+					i--;
+					continue;
+				}
+				if (ememys[i].y<-ememys[i].r) {
+					ememys.splice(i,1);
+					i--;
+					continue;
+				}
+				ctx.beginPath();
+				ctx.fillStyle=ememys[i].c;
+				ctx.arc(ememys[i].x,ememys[i].y,ememys[i].r,0,2*Math.PI);
+				ctx.fill();
+				ememys[i].y+=ememys[i].s;
+			}
+		}
+		/*发射子弹*/
+		var bullets=[];
+		var bullet=function(dx,dy){
+			this.x=dx;
+			this.y=dy;
+			this.speed=10;
+			this.r=8;
+			this.boom=false;
+		}
+		
+		var drawbullet=function(){
+			if (bullets.length>0) {
+				for(var i=0;i<bullets.length;i++){
+					if(bullets[i].boom){
+						bullets.splice(i,1);
+						i--;
+						continue;
+					}
+					if (bullets[i].y<-bullets[i].r) {
+						bullets.splice(i,1);
+						i--;
+						continue;
+					}
+					ctx.beginPath();
+					ctx.fillStyle="rgba(114,19,19,1)";
+					ctx.arc(bullets[i].x,bullets[i].y,bullets[i].r,0,2*Math.PI);
+					ctx.fill();		
+					bullets[i].y-=bullets[i].speed;			
+				}
+			}
+		}
+		var createBullet=function(){
+			if (!hero.boom) {
+				var x=hero.x;
+				var y=hero.y-hero.r-10;
+				var b=new bullet(x,y);
+				bullets.push(b);
+			}else{
+				if(bullets.length>0){
+					bullets.splice(0,bullets.length);
+				}
+			}
+			//console.log(bullets);
+		}
+		setInterval(createBullet,200);
+
+		/*碰撞检测*/
+		function hitObj(bul,obj){
+			var distant=Math.sqrt((bul.x-obj.x)*(bul.x-obj.x)+(bul.y-obj.y)*(bul.y-obj.y));
+			if(distant<=(bul.r+obj.r)){
+				return true;
+			}
+			else{
+				return false;
+			}
+		}
+		function AllHitObjTest(){
+			for(var i=0;i<bullets.length;i++){
+				for(var j=0;j<ememys.length;j++){
+					if(!ememys[j].boom){
+						if(hitObj(bullets[i],ememys[j])){
+							ememys[j].life-=2;
+						}
+						if (ememys[j].life<=0) {
+							bullets[i].boom=true;
+							ememys[j].boom=true;
+						}
+					}
+				}
+			}
+			for(var i=0;i<ememys.length;i++){
+				if(hitObj(hero,ememys[i])){
+					hero.boom=true;
+				}
+			}
+		}
+
+		var hero={
+			x:W/2,
+			y:H*0.75,
+			r:30,
+			c:"rgba(123,187,73,1)",
+			boom:false,
+			die:false,
+			b:bullets,
+			f:2,
+
+			draw:function(){
+				if(!hero.boom){
+					ctx.beginPath();
+					ctx.fillStyle=hero.c;
+					ctx.arc(hero.x,hero.y,hero.r,0,2*Math.PI);
+					ctx.fill();
+				}else{
+					ctx.beginPath();
+					ctx.font="30px Verdana";
+					ctx.fillStyle="red";
+					ctx.fillText("GAME OVER",W/2-90,H/2);
+					ctx.fill();
+					RESTART.style.display="block";
+					var bbox=ctx.canvas.getBoundingClientRect();
+					RESTART.style.left=bbox.left+W/2-50+'px';
+					RESTART.style.top=H*0.68+'px';
+				}
+			},
+			shot:function(){
+				if(!hero.boom)
+					drawbullet();
+			}
+
+		}
+		function drawGround(){
+			ctx.beginPath();
+			ctx.fillStyle="#cecece";
+			ctx.fillRect(0,0,W,H);
+			ctx.fill();
+
+			ctx.font="20px Verdana";
+			ctx.fillStyle="red";
+			ctx.fillText("得分:"+SCORE,10,25);
+			ctx.fill();
+		}
+
+
+		window.requestAnimationFrame = (function() {
+		    return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || function(callback) {
+		      return window.setTimeout(callback, 1000 / 60);
+		    };
+		  })()
+		  
+		var restart=function(){
+			RESTART.style.display="none";
+			ctx.clearRect(0,0,W,H);
+			ememys=[];
+			SCORE=0;
+			hero.boom=false;
+			hero.x=W/2;
+			hero.y=H*0.75;
+			curp.x=hero.x;
+			curp.y=hero.y;
+			isDown=false;
+		}
+		var updata=function(){
+			if(!hero.die){
+				ctx.clearRect(0,0,W,H);
+				drawGround();
+				hero.draw();
+				hero.shot();
+				drawEmemys();
+				AllHitObjTest();
+				requestAnimationFrame(updata);
+			}
+		}
+		requestAnimationFrame(updata);
+		</script>
+	</div>
+</body>
+</html>
